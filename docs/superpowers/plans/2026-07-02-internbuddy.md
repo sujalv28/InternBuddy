@@ -6,7 +6,7 @@
 
 **Architecture:** A linear LangGraph state graph (`parse_resume → scrape → filter → match → generate_report → send_email`) drives flat single-responsibility modules. Streamlit collects inputs and renders the results table, download button, and email status. Every external failure is caught into `state.errors` and surfaced as a warning — the UI never crashes.
 
-**Tech Stack:** Python 3.11+, Streamlit, LangGraph, google-generativeai (Gemini `gemini-2.5-flash`), requests + BeautifulSoup4, pdfplumber, python-docx, fpdf2, python-dotenv, pytest.
+**Tech Stack:** Python 3.11+, Streamlit, LangGraph, google-genai (Gemini `gemini-2.5-flash`), requests + BeautifulSoup4, pdfplumber, python-docx, fpdf2, python-dotenv, pytest.
 
 ## Global Constraints
 
@@ -50,7 +50,7 @@
 ```
 streamlit>=1.30
 langgraph>=0.2
-google-generativeai>=0.8
+google-genai>=1.0
 requests>=2.31
 beautifulsoup4>=4.12
 pdfplumber>=0.11
@@ -894,12 +894,19 @@ Return ONLY valid JSON, no prose, in exactly this shape:
 
 
 def _default_client():
-    import google.generativeai as genai
+    from google import genai
 
     from .config import get_google_api_key
 
-    genai.configure(api_key=get_google_api_key())
-    return genai.GenerativeModel(_MODEL_NAME)
+    client = genai.Client(api_key=get_google_api_key())
+
+    class _GeminiAdapter:
+        """Adapts the google-genai client to a .generate_content(prompt) -> obj-with-.text interface."""
+
+        def generate_content(self, prompt):
+            return client.models.generate_content(model=_MODEL_NAME, contents=prompt)
+
+    return _GeminiAdapter()
 
 
 def _format_listings(listings: list) -> str:

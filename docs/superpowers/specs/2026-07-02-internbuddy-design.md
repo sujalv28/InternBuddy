@@ -42,7 +42,7 @@ by email.
 
 - **UI:** Streamlit
 - **Orchestration:** LangGraph (linear state graph, one node per stage)
-- **LLM:** Google Gemini via `google-generativeai`, model `gemini-2.5-flash`
+- **LLM:** Google Gemini via `google-genai`, model `gemini-2.5-flash`
 - **Scraping:** `requests` + `beautifulsoup4`
 - **Resume parsing:** `pdfplumber` (PDF), `python-docx` (DOCX)
 - **Report:** `fpdf2` (PDF), stdlib `csv` (CSV)

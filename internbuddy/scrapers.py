@@ -54,3 +54,36 @@ def scrape_internshala(field_of_interest: str, max_pages: int = 1) -> list[JobLi
         results.extend(parse_internshala(html))
         time.sleep(REQUEST_DELAY)
     return results
+
+
+def parse_linkedin(html: str) -> list[JobListing]:
+    soup = BeautifulSoup(html, "html.parser")
+    listings: list[JobListing] = []
+    for card in soup.select("li"):
+        role_el = card.select_one("h3.base-search-card__title")
+        company_el = card.select_one("h4.base-search-card__subtitle")
+        if not role_el or not company_el:
+            continue
+        role = role_el.get_text(strip=True)
+        company = company_el.get_text(strip=True)
+        loc_el = card.select_one(".job-search-card__location")
+        location = loc_el.get_text(strip=True) if loc_el else "Not specified"
+        link_el = card.select_one("a.base-card__full-link") or card.select_one("a")
+        url = ""
+        if link_el and link_el.has_attr("href"):
+            url = link_el["href"].split("?")[0]
+        description = (
+            f"{role} at {company} in {location}. "
+            f"View the full description on LinkedIn: {url}"
+        )
+        listings.append(JobListing(company, role, location, description, url, "linkedin"))
+    return listings
+
+
+def scrape_linkedin_guest(field_of_interest: str, location: str = "India",
+                          start: int = 0) -> list[JobListing]:
+    url = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+    params = {"keywords": field_of_interest, "location": location, "start": start}
+    html = _get(url, params=params)
+    time.sleep(REQUEST_DELAY)
+    return parse_linkedin(html)

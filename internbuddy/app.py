@@ -4,7 +4,7 @@ from graph import run
 from models import UserProfile
 
 st.set_page_config(page_title="Internbuddy", page_icon="🎓")
-st.title("🎓 Internbuddy — AI Internship Finder")
+st.title("Internbuddy — AI Internship Finder")
 st.caption("Find internships matched to your profile, delivered as a report.")
 
 with st.form("profile_form"):

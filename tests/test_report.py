@@ -54,6 +54,21 @@ def test_build_csv_neutralizes_formula_injection():
     assert rows[1][5] == "'=HYPERLINK(0)"
 
 
+def test_build_reports_both_yields_csv_and_pdf():
+    reports = report.build_reports("both", MATCHED, PROFILE)
+    assert len(reports) == 2
+    mimes = [m for _, m, _ in reports]
+    assert "text/csv" in mimes and "application/pdf" in mimes
+    csv_bytes = next(b for b, m, _ in reports if m == "text/csv")
+    assert csv_bytes[:7] == b"Company"
+    pdf_bytes = next(b for b, m, _ in reports if m == "application/pdf")
+    assert pdf_bytes[:4] == b"%PDF"
+
+
+def test_build_reports_single_format():
+    assert len(report.build_reports("pdf", MATCHED, PROFILE)) == 1
+
+
 def test_build_pdf_handles_non_latin_text():
     matched = [MatchedJob("Café", "Rôle", "Zürich", "naïve résumé",
                           "http://c", "linkedin", "http://c", "Perfect — go for it! ★", 1)]

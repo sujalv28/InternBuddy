@@ -1,3 +1,4 @@
+import re
 import time
 
 import requests
@@ -101,3 +102,45 @@ def scrape_linkedin_guest(field_of_interest: str, location: str = "India",
     html = _get(url, params=params)
     time.sleep(REQUEST_DELAY)
     return parse_linkedin(html)
+
+
+def _get_json(url, params=None, timeout=20) -> dict:
+    resp = requests.get(url, headers=HEADERS, params=params, timeout=timeout)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def parse_jobs_api(payload: dict) -> list[JobListing]:
+    """Parse a The Muse public-jobs API payload into listings. Each listing
+    carries the posting's landing page as its apply URL."""
+    listings: list[JobListing] = []
+    for item in payload.get("results", []):
+        role = (item.get("name") or "").strip()
+        url = _safe_url((item.get("refs") or {}).get("landing_page", ""))
+        if not role or not url:
+            continue
+        company = ((item.get("company") or {}).get("name") or "Company").strip()
+        locations = [loc.get("name") for loc in item.get("locations", []) if loc.get("name")]
+        location = locations[0] if locations else "Not specified"
+        text = BeautifulSoup(item.get("contents") or "", "html.parser").get_text(" ", strip=True)
+        description = text[:300] or role
+        listings.append(JobListing(company, role, location, description, url, "web"))
+    return listings
+
+
+def scrape_web_search(field_of_interest: str, max_results: int = 20,
+                      pages: int = 2) -> list[JobListing]:
+    """Supplement the site scrapers with internships from a keyless public jobs
+    API, which stays reachable from datacenter IPs where search-engine and
+    Internshala scraping get bot-blocked. Filtered to the user's interest;
+    final ranking happens downstream."""
+    listings: list[JobListing] = []
+    for page in range(1, pages + 1):
+        payload = _get_json("https://www.themuse.com/api/public/jobs",
+                            params={"level": "Internship", "page": page})
+        listings += parse_jobs_api(payload)
+        time.sleep(REQUEST_DELAY)
+    tokens = set(re.findall(r"[a-z0-9]+", field_of_interest.lower()))
+    relevant = [j for j in listings
+                if tokens & set(re.findall(r"[a-z0-9]+", f"{j.role} {j.description}".lower()))]
+    return (relevant or listings)[:max_results]

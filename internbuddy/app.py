@@ -34,7 +34,7 @@ with st.form("profile_form"):
         type="password",
         help="Get a free key at https://aistudio.google.com/apikey — used only to rank your matches.",
     )
-    report_format = st.radio("Report format", ["csv", "pdf"], horizontal=True)
+    report_format = st.radio("Report format", ["csv", "pdf", "both"], horizontal=True)
     top_n = st.slider("Number of matches", min_value=5, max_value=20, value=10)
     submitted = st.form_submit_button("Find internships")
 
@@ -78,13 +78,13 @@ if submitted:
         use_container_width=True,
     )
 
-    report_bytes = state.get("report_bytes", b"")
-    if report_bytes:
+    for data, mime, filename in state.get("reports", []):
         st.download_button(
-            "⬇️ Download report",
-            data=report_bytes,
-            file_name=state.get("report_filename", "internbuddy_report"),
-            mime=state.get("report_mime", "text/csv"),
+            f"⬇️ Download {filename}",
+            data=data,
+            file_name=filename,
+            mime=mime,
+            key=filename,
         )
 
     email_status = state.get("email_status", "")

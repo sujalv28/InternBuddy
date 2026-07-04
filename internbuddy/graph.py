@@ -26,6 +26,10 @@ def node_scrape(state: AgentState) -> dict:
         listings += scrapers.scrape_linkedin_guest(profile.field_of_interest)
     except Exception as exc:
         errors.append(f"LinkedIn scrape failed: {exc}")
+    try:
+        listings += scrapers.scrape_web_search(profile.field_of_interest)
+    except Exception as exc:
+        errors.append(f"Web search failed: {exc}")
     return {"raw_listings": listings, "errors": errors}
 
 
@@ -57,22 +61,22 @@ def node_match(state: AgentState) -> dict:
 def node_report(state: AgentState) -> dict:
     matched = state.get("matched_jobs", [])
     if not matched:
-        return {"report_bytes": b""}
-    data, mime, filename = report.build_report(
+        return {"reports": [], "report_bytes": b""}
+    reports = report.build_reports(
         state.get("report_format", "csv"), matched, state["profile"]
     )
-    return {"report_bytes": data, "report_mime": mime, "report_filename": filename}
+    data, mime, filename = reports[0]
+    return {"reports": reports, "report_bytes": data,
+            "report_mime": mime, "report_filename": filename}
 
 
 def node_email(state: AgentState) -> dict:
     errors = list(state.get("errors", []))
-    if not state.get("report_bytes"):
+    reports = state.get("reports", [])
+    if not reports:
         return {"email_status": "skipped (no matches to send)", "errors": errors}
     try:
-        mailer.send_report(
-            state["profile"], state["report_bytes"],
-            state["report_filename"], state["report_mime"],
-        )
+        mailer.send_reports(state["profile"], reports)
         status = "sent"
     except Exception as exc:
         status = f"failed: {exc}"

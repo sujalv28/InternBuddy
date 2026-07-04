@@ -48,3 +48,14 @@ def test_send_report_sends_message(monkeypatch):
     attachments = [p for p in server.sent.iter_attachments()]
     assert len(attachments) == 1
     assert attachments[0].get_filename() == "r.csv"
+
+
+def test_send_reports_attaches_all(monkeypatch):
+    FakeSMTP.instances.clear()
+    monkeypatch.setattr(mailer.smtplib, "SMTP", FakeSMTP)
+    reports = [(b"a,b\n", "text/csv", "r.csv"),
+               (b"%PDF-1", "application/pdf", "r.pdf")]
+    status = mailer.send_reports(PROFILE, reports, smtp=SMTP_CFG)
+    assert status == "sent"
+    names = sorted(p.get_filename() for p in FakeSMTP.instances[0].sent.iter_attachments())
+    assert names == ["r.csv", "r.pdf"]

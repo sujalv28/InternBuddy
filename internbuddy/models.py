@@ -54,6 +54,7 @@ class AgentState(TypedDict, total=False):
     raw_listings: list
     filtered_listings: list
     matched_jobs: list
+    reports: list
     report_bytes: bytes
     report_mime: str
     report_filename: str

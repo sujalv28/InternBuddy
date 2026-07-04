@@ -62,3 +62,12 @@ def build_report(fmt: str, matched: list, profile: UserProfile) -> tuple:
     if fmt == "pdf":
         return build_pdf(matched, profile), "application/pdf", "internbuddy_report.pdf"
     return build_csv(matched), "text/csv", "internbuddy_report.csv"
+
+
+def build_reports(fmt: str, matched: list, profile: UserProfile) -> list:
+    """Return a list of (bytes, mime, filename) reports. 'both' yields CSV and
+    PDF; any other value yields the single requested format."""
+    if fmt == "both":
+        return [build_report("csv", matched, profile),
+                build_report("pdf", matched, profile)]
+    return [build_report(fmt, matched, profile)]

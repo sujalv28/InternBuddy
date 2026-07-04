@@ -3,6 +3,7 @@ import re
 
 import pdfplumber
 import requests
+from bs4 import BeautifulSoup
 from docx import Document
 
 _DRIVE_ID_RE = re.compile(r"/d/([A-Za-z0-9_-]+)|[?&]id=([A-Za-z0-9_-]+)")
@@ -27,14 +28,39 @@ _BROWSER_UA = (
 
 def download_resume(link: str, timeout: int = 30) -> bytes:
     file_id = extract_drive_id(link)
-    # Hit the current usercontent download host directly with confirm=t so the
-    # virus-scan interstitial is skipped; a browser UA avoids bot redirects/500s.
-    url = "https://drive.usercontent.google.com/download"
-    params = {"id": file_id, "export": "download", "confirm": "t"}
-    resp = requests.get(url, params=params, headers={"User-Agent": _BROWSER_UA},
-                        timeout=timeout)
+    session = requests.Session()
+    session.headers["User-Agent"] = _BROWSER_UA
+
+    resp = session.get("https://drive.google.com/uc", timeout=timeout,
+                       params={"id": file_id, "export": "download"})
+    resp.raise_for_status()
+
+    # Small files return the raw bytes directly. Large or virus-scanned files
+    # return an HTML interstitial with a confirm form; follow it with the exact
+    # fields Google supplies (a hard-coded confirm=t 500s on the newer flow).
+    if "text/html" not in resp.headers.get("Content-Type", "").lower():
+        return resp.content
+
+    action, fields = _parse_confirm_form(resp.text)
+    if not action:
+        raise ResumeError(
+            "Could not download the resume. Make sure the Drive link is shared "
+            "with 'Anyone with the link'."
+        )
+    resp = session.get(action, params=fields, timeout=timeout)
     resp.raise_for_status()
     return resp.content
+
+
+def _parse_confirm_form(html: str) -> tuple[str, dict]:
+    """Extract the download confirmation form's action URL and hidden fields
+    from Google Drive's virus-scan interstitial page."""
+    form = BeautifulSoup(html, "html.parser").find("form")
+    if not form:
+        return "", {}
+    fields = {inp["name"]: inp.get("value", "")
+              for inp in form.select("input[name]")}
+    return form.get("action", ""), fields
 
 
 def extract_text(data: bytes) -> str:

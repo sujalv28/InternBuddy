@@ -3,15 +3,15 @@ import streamlit as st
 from graph import run
 from models import UserProfile
 
-st.set_page_config(page_title="Internbuddy", page_icon="🎓")
+st.set_page_config(page_title="Internbuddy")
 st.title("Internbuddy — AI Internship Finder")
 st.caption("Find internships matched to your profile, delivered as a report.")
 
 with st.form("profile_form"):
-    name = st.text_input("Name")
+    name = st.text_input("Name", placeholder="Your Name")
     stream = st.text_input("Educational stream", placeholder="e.g. B.Tech Computer Science")
     interest = st.text_input("Field of interest", placeholder="e.g. machine learning")
-    email = st.text_input("Email")
+    email = st.text_input("Email", placeholder="name@mail.com")
     resume_link = st.text_input(
         "Google Drive resume link",
         placeholder="https://drive.google.com/file/d/.../view (shared: anyone with the link)",

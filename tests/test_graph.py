@@ -1,5 +1,5 @@
-from internbuddy import graph, resume, scrapers, matcher, report, mailer
-from internbuddy.models import JobListing, MatchedJob, UserProfile
+import graph, resume, scrapers, matcher, report, mailer
+from models import JobListing, MatchedJob, UserProfile
 
 PROFILE = UserProfile("Asha", "B.Tech", "machine learning", "a@x.com",
                       "https://drive.google.com/file/d/ID/view")
@@ -11,7 +11,7 @@ def _patch_all(monkeypatch, listings, matched):
     monkeypatch.setattr(scrapers, "scrape_linkedin_guest",
                         lambda foi, location="India", start=0: [])
     monkeypatch.setattr(matcher, "match_jobs",
-                        lambda p, r, l, top_n=10, client=None: matched)
+                        lambda p, r, l, top_n=10, client=None, api_key=None: matched)
     monkeypatch.setattr(mailer, "send_report",
                         lambda p, b, f, m, smtp=None: "sent")
 
@@ -19,7 +19,7 @@ def _patch_all(monkeypatch, listings, matched):
 def test_run_happy_path(monkeypatch):
     listings = [JobListing("Acme", "ML Intern", "Remote", "dl", "http://a", "internshala")]
     matched = [MatchedJob("Acme", "ML Intern", "Remote", "dl", "http://a",
-                          "internshala", "fit", 1)]
+                          "internshala", "http://a", "fit", 1)]
     _patch_all(monkeypatch, listings, matched)
     state = graph.run(PROFILE, report_format="csv", top_n=5)
     assert len(state["matched_jobs"]) == 1
@@ -33,14 +33,14 @@ def test_run_scraper_error_is_captured(monkeypatch):
         raise RuntimeError("blocked")
 
     matched = [MatchedJob("Beta", "Data Intern", "Pune", "sql", "http://b",
-                          "linkedin", "fit", 1)]
+                          "linkedin", "http://b", "fit", 1)]
     monkeypatch.setattr(resume, "get_resume_text", lambda link: "")
     monkeypatch.setattr(scrapers, "scrape_internshala", boom)
     monkeypatch.setattr(scrapers, "scrape_linkedin_guest",
                         lambda foi, location="India", start=0:
                         [JobListing("Beta", "Data Intern", "Pune", "sql", "http://b", "linkedin")])
     monkeypatch.setattr(matcher, "match_jobs",
-                        lambda p, r, l, top_n=10, client=None: matched)
+                        lambda p, r, l, top_n=10, client=None, api_key=None: matched)
     monkeypatch.setattr(mailer, "send_report", lambda p, b, f, m, smtp=None: "sent")
     state = graph.run(PROFILE, report_format="csv")
     assert any("Internshala" in e for e in state["errors"])

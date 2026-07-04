@@ -1,4 +1,4 @@
-from internbuddy.models import UserProfile, JobListing, MatchedJob
+from models import UserProfile, JobListing, MatchedJob
 
 
 def test_userprofile_validate_ok():
@@ -17,5 +17,5 @@ def test_userprofile_validate_collects_errors():
 
 def test_dataclasses_construct():
     j = JobListing("Acme", "ML Intern", "Remote", "desc", "http://x", "linkedin")
-    m = MatchedJob(j.company, j.role, j.location, j.description, j.url, j.source, "because", 1)
+    m = MatchedJob(j.company, j.role, j.location, j.description, j.url, j.source, j.url, "because", 1)
     assert m.rank == 1 and m.why == "because"

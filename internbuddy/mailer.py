@@ -1,8 +1,8 @@
 import smtplib
 from email.message import EmailMessage
 
-from .config import get_smtp_config
-from .models import UserProfile
+from config import get_smtp_config
+from models import UserProfile
 
 
 def send_report(profile: UserProfile, report_bytes: bytes, filename: str,

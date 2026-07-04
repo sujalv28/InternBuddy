@@ -1,5 +1,5 @@
-from internbuddy import matcher
-from internbuddy.models import JobListing, UserProfile
+import matcher
+from models import JobListing, UserProfile
 
 PROFILE = UserProfile("A", "B.Tech", "machine learning", "a@x.com", "link")
 LISTINGS = [

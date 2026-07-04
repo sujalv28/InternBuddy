@@ -1,5 +1,5 @@
-from internbuddy import mailer
-from internbuddy.models import UserProfile
+import mailer
+from models import UserProfile
 
 PROFILE = UserProfile("Asha", "B.Tech", "ML", "asha@example.com", "link")
 SMTP_CFG = {

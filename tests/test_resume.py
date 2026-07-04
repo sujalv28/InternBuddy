@@ -4,7 +4,7 @@ import pytest
 from docx import Document
 from fpdf import FPDF
 
-from internbuddy import resume
+import resume
 
 
 def test_extract_drive_id_file_form():

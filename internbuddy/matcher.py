@@ -1,7 +1,7 @@
 import json
 import re
 
-from .models import JobListing, MatchedJob, UserProfile
+from models import JobListing, MatchedJob, UserProfile
 
 
 def _tokens(text: str) -> set:
@@ -52,12 +52,15 @@ Return ONLY valid JSON, no prose, in exactly this shape:
 """
 
 
-def _default_client():
+def _default_client(api_key: str = None):
     from google import genai
 
-    from .config import get_google_api_key
+    from config import get_google_api_key
 
-    client = genai.Client(api_key=get_google_api_key())
+    if api_key is None:
+        client = genai.Client(api_key=get_google_api_key())
+    else:
+        client = genai.Client(api_key=api_key)
 
     class _GeminiAdapter:
         """Adapts the google-genai client to a .generate_content(prompt) -> obj-with-.text interface."""
@@ -96,15 +99,15 @@ def fallback_matches(listings: list, profile: UserProfile, top_n: int = 10) -> l
             f"offering hands-on experience at {job.company}."
         )
         out.append(MatchedJob(job.company, job.role, job.location, job.description,
-                              job.url, job.source, why, rank))
+                              job.url, job.source, job.url, why, rank))
     return out
 
 
 def match_jobs(profile: UserProfile, resume_text: str, listings: list,
-               top_n: int = 10, client=None) -> list:
+               top_n: int = 10, client=None, api_key=None) -> list:
     if not listings:
         return []
-    model = client or _default_client()
+    model = client or _default_client(api_key)
     prompt = _PROMPT_TEMPLATE.format(
         name=profile.name,
         stream=profile.stream,
@@ -123,7 +126,7 @@ def match_jobs(profile: UserProfile, resume_text: str, listings: list,
                 job = listings[idx]
                 matches.append(MatchedJob(job.company, job.role, job.location,
                                           job.description, job.url, job.source,
-                                          str(item.get("why", "")), rank))
+                                          job.url, str(item.get("why", "")), rank))
         if not matches:
             raise ValueError("Model returned no valid matches")
         return matches

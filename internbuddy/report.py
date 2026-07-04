@@ -3,10 +3,10 @@ import io
 
 from fpdf import FPDF
 
-from .models import UserProfile
+from models import UserProfile
 
 COLUMNS = ["Company", "Job Role", "Job Location", "Job Description",
-           "Why This Role Is For You"]
+           "Apply Link", "Why This Role Is For You"]
 
 
 def _latin1(text: str) -> str:
@@ -19,7 +19,7 @@ def build_csv(matched: list) -> bytes:
     writer = csv.writer(buf)
     writer.writerow(COLUMNS)
     for job in matched:
-        writer.writerow([job.company, job.role, job.location, job.description, job.why])
+        writer.writerow([job.company, job.role, job.location, job.description, job.apply_link, job.why])
     return buf.getvalue().encode("utf-8")
 
 
@@ -38,6 +38,7 @@ def build_pdf(matched: list, profile: UserProfile) -> bytes:
         pdf.set_font("Helvetica", size=10)
         pdf.multi_cell(0, 6, _latin1(f"Location: {job.location}"), new_x="LMARGIN", new_y="NEXT")
         pdf.multi_cell(0, 6, _latin1(f"Description: {job.description}"), new_x="LMARGIN", new_y="NEXT")
+        pdf.multi_cell(0, 6, _latin1(f"Apply Link: {job.apply_link}"), new_x="LMARGIN", new_y="NEXT")
         pdf.multi_cell(0, 6, _latin1(f"Why this role is for you: {job.why}"), new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
     out = pdf.output()

@@ -43,6 +43,7 @@ class MatchedJob:
     description: str
     url: str
     source: str
+    apply_link: str
     why: str
     rank: int
 
@@ -58,5 +59,6 @@ class AgentState(TypedDict, total=False):
     report_filename: str
     report_format: str
     top_n: int
+    gemini_api_key: str
     email_status: str
     errors: list

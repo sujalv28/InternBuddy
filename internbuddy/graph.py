@@ -1,7 +1,7 @@
 from langgraph.graph import StateGraph, START, END
 
-from . import matcher, mailer, report, resume, scrapers
-from .models import AgentState, UserProfile
+import matcher, mailer, models, report, resume, scrapers
+from models import AgentState, UserProfile
 
 
 def node_parse_resume(state: AgentState) -> dict:
@@ -45,6 +45,7 @@ def node_match(state: AgentState) -> dict:
         matched = matcher.match_jobs(
             state["profile"], state.get("resume_text", ""),
             filtered, state.get("top_n", 10),
+            api_key=state.get("gemini_api_key"),
         )
     except Exception as exc:
         errors.append(f"Matching failed: {exc}")
@@ -98,12 +99,14 @@ def build_graph():
     return builder.compile()
 
 
-def run(profile: UserProfile, report_format: str = "csv", top_n: int = 10) -> AgentState:
+def run(profile: UserProfile, report_format: str = "csv", top_n: int = 10,
+        gemini_api_key: str = None) -> AgentState:
     app = build_graph()
     initial: AgentState = {
         "profile": profile,
         "report_format": report_format,
         "top_n": top_n,
+        "gemini_api_key": gemini_api_key,
         "errors": [],
     }
     return app.invoke(initial)

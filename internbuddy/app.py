@@ -1,7 +1,7 @@
 import streamlit as st
 
-from internbuddy.graph import run
-from internbuddy.models import UserProfile
+from graph import run
+from models import UserProfile
 
 st.set_page_config(page_title="Internbuddy", page_icon="🎓")
 st.title("🎓 Internbuddy — AI Internship Finder")
@@ -16,6 +16,11 @@ with st.form("profile_form"):
         "Google Drive resume link",
         placeholder="https://drive.google.com/file/d/.../view (shared: anyone with the link)",
     )
+    gemini_api_key = st.text_input(
+        "Your Gemini API key",
+        type="password",
+        help="Get a free key at https://aistudio.google.com/apikey — used only to rank your matches.",
+    )
     report_format = st.radio("Report format", ["csv", "pdf"], horizontal=True)
     top_n = st.slider("Number of matches", min_value=5, max_value=20, value=10)
     submitted = st.form_submit_button("Find internships")
@@ -23,6 +28,8 @@ with st.form("profile_form"):
 if submitted:
     profile = UserProfile(name, stream, interest, email, resume_link)
     problems = profile.validate()
+    if not gemini_api_key.strip():
+        problems.append("Your Gemini API key is required.")
     if problems:
         for p in problems:
             st.error(p)
@@ -30,7 +37,8 @@ if submitted:
 
     with st.spinner("Searching Internshala and LinkedIn, ranking with Gemini..."):
         try:
-            state = run(profile, report_format=report_format, top_n=top_n)
+            state = run(profile, report_format=report_format, top_n=top_n,
+                        gemini_api_key=gemini_api_key.strip())
         except Exception as exc:  # config errors, unexpected failures
             st.error(f"Something went wrong: {exc}")
             st.stop()

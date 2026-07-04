@@ -3,7 +3,7 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
-from .models import JobListing
+from models import JobListing
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; InternbuddyBot/1.0; +https://example.com/bot)"

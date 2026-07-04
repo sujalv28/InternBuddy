@@ -1,5 +1,5 @@
 import pytest
-from internbuddy import config
+import config
 
 
 def test_get_google_api_key_present(monkeypatch):

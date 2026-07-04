@@ -1,4 +1,4 @@
-from internbuddy import scrapers
+import scrapers
 
 SAMPLE = """
 <div id="internship_list_container">

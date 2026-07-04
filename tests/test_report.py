@@ -44,6 +44,16 @@ def test_build_report_pdf_dispatch():
     assert data[:4] == b"%PDF"
 
 
+def test_build_csv_neutralizes_formula_injection():
+    evil = [MatchedJob("=cmd()", "+2+3", "-9", "@SUM(A1)", "http://a",
+                       "internshala", "http://a", "=HYPERLINK(0)", 1)]
+    rows = list(csv.reader(io.StringIO(report.build_csv(evil).decode("utf-8"))))
+    assert rows[1][0] == "'=cmd()"
+    assert rows[1][1] == "'+2+3"
+    assert rows[1][3] == "'@SUM(A1)"
+    assert rows[1][5] == "'=HYPERLINK(0)"
+
+
 def test_build_pdf_handles_non_latin_text():
     matched = [MatchedJob("Café", "Rôle", "Zürich", "naïve résumé",
                           "http://c", "linkedin", "http://c", "Perfect — go for it! ★", 1)]

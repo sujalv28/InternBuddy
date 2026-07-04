@@ -14,12 +14,25 @@ def _latin1(text: str) -> str:
     return (text or "").encode("latin-1", errors="replace").decode("latin-1")
 
 
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value) -> str:
+    """Neutralize CSV formula injection: scraped text opened in Excel/Sheets
+    would execute a cell that starts with =, +, -, @, TAB or CR. Prefix such
+    cells with an apostrophe so spreadsheets render them as literal text."""
+    text = str(value or "")
+    return "'" + text if text[:1] in _FORMULA_PREFIXES else text
+
+
 def build_csv(matched: list) -> bytes:
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(COLUMNS)
     for job in matched:
-        writer.writerow([job.company, job.role, job.location, job.description, job.apply_link, job.why])
+        writer.writerow([_csv_safe(job.company), _csv_safe(job.role),
+                         _csv_safe(job.location), _csv_safe(job.description),
+                         _csv_safe(job.apply_link), _csv_safe(job.why)])
     return buf.getvalue().encode("utf-8")
 
 

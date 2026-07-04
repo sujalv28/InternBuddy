@@ -19,10 +19,20 @@ def extract_drive_id(link: str) -> str:
     return match.group(1) or match.group(2)
 
 
+_BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+)
+
+
 def download_resume(link: str, timeout: int = 30) -> bytes:
     file_id = extract_drive_id(link)
-    url = f"https://drive.google.com/uc?export=download&id={file_id}"
-    resp = requests.get(url, timeout=timeout)
+    # Hit the current usercontent download host directly with confirm=t so the
+    # virus-scan interstitial is skipped; a browser UA avoids bot redirects/500s.
+    url = "https://drive.usercontent.google.com/download"
+    params = {"id": file_id, "export": "download", "confirm": "t"}
+    resp = requests.get(url, params=params, headers={"User-Agent": _BROWSER_UA},
+                        timeout=timeout)
     resp.raise_for_status()
     return resp.content
 

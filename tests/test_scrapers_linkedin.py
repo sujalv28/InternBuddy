@@ -34,6 +34,18 @@ def test_parse_linkedin_extracts_cards():
     assert jobs[0].description  # non-empty
 
 
+def test_parse_linkedin_blanks_non_http_url():
+    evil = """
+    <ul><li><div class="base-card">
+      <a class="base-card__full-link" href="javascript:alert(1)"></a>
+      <h3 class="base-search-card__title">Intern</h3>
+      <h4 class="base-search-card__subtitle">Corp</h4>
+    </div></li></ul>
+    """
+    jobs = scrapers.parse_linkedin(evil)
+    assert jobs[0].url == ""  # javascript: link rejected
+
+
 def test_scrape_linkedin_guest_calls_get(monkeypatch):
     captured = {}
 

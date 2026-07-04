@@ -1,7 +1,20 @@
+import os
+
 import streamlit as st
 
 from graph import run
 from models import UserProfile
+
+# On Streamlit Cloud there is no .env file, so SMTP settings must come from the
+# app's Secrets. Mirror them into the environment (once) so config.get_smtp_config,
+# which reads os.getenv, finds them. Guarded: no secrets configured is fine.
+try:
+    for _key in ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD",
+                 "FROM_EMAIL", "GOOGLE_API_KEY"):
+        if _key in st.secrets:
+            os.environ.setdefault(_key, str(st.secrets[_key]))
+except Exception:
+    pass
 
 st.set_page_config(page_title="Internbuddy")
 st.title("Internbuddy — AI Internship Finder")

@@ -31,25 +31,52 @@ def download_resume(link: str, timeout: int = 30) -> bytes:
     session = requests.Session()
     session.headers["User-Agent"] = _BROWSER_UA
 
-    resp = session.get("https://drive.google.com/uc", timeout=timeout,
-                       params={"id": file_id, "export": "download"})
-    resp.raise_for_status()
-
-    # Small files return the raw bytes directly. Large or virus-scanned files
-    # return an HTML interstitial with a confirm form; follow it with the exact
-    # fields Google supplies (a hard-coded confirm=t 500s on the newer flow).
-    if "text/html" not in resp.headers.get("Content-Type", "").lower():
-        return resp.content
-
-    action, fields = _parse_confirm_form(resp.text)
-    if not action:
+    # An uploaded PDF/DOCX downloads from the uc endpoint. A native Google Doc
+    # 500s there and must be exported as PDF instead, so try that as a fallback.
+    data = _download_upload(session, file_id, timeout)
+    if data is None:
+        data = _export_google_doc(session, file_id, timeout)
+    if data is None:
         raise ResumeError(
             "Could not download the resume. Make sure the Drive link is shared "
             "with 'Anyone with the link'."
         )
+    return data
+
+
+def _download_upload(session, file_id: str, timeout: int):
+    """Fetch an uploaded file (PDF/DOCX) via the uc endpoint, following the
+    virus-scan confirm form for large files. Returns bytes on success, or None
+    if this isn't a downloadable upload (e.g. a native Google Doc, which 500s)."""
+    try:
+        resp = session.get("https://drive.google.com/uc", timeout=timeout,
+                           params={"id": file_id, "export": "download"})
+    except requests.RequestException:
+        return None
+    if resp.status_code != 200:
+        return None
+    # Small files return raw bytes; large/scanned files return an HTML confirm
+    # form we follow with the exact fields Google supplies.
+    if "text/html" not in resp.headers.get("Content-Type", "").lower():
+        return resp.content
+    action, fields = _parse_confirm_form(resp.text)
+    if not action:
+        return None
     resp = session.get(action, params=fields, timeout=timeout)
-    resp.raise_for_status()
-    return resp.content
+    return resp.content if resp.status_code == 200 else None
+
+
+def _export_google_doc(session, file_id: str, timeout: int):
+    """Export a native Google Doc as PDF. Returns bytes on success, or None."""
+    try:
+        resp = session.get(
+            f"https://docs.google.com/document/d/{file_id}/export",
+            params={"format": "pdf"}, timeout=timeout)
+    except requests.RequestException:
+        return None
+    if resp.status_code == 200 and resp.content[:5] == b"%PDF-":
+        return resp.content
+    return None
 
 
 def _parse_confirm_form(html: str) -> tuple[str, dict]:

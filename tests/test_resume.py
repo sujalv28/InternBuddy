@@ -48,3 +48,52 @@ def test_get_resume_text_uses_download(monkeypatch):
     doc.save(buf)
     monkeypatch.setattr(resume, "download_resume", lambda link, timeout=30: buf.getvalue())
     assert "hello resume" in resume.get_resume_text("https://drive.google.com/file/d/ID/view")
+
+
+class _Resp:
+    def __init__(self, status_code=200, content=b"", ctype="", text=""):
+        self.status_code = status_code
+        self.content = content
+        self.headers = {"Content-Type": ctype}
+        self.text = text
+
+
+class _FakeSession:
+    """Serves queued responses keyed by a substring of the requested URL."""
+
+    def __init__(self, routes):
+        self.routes = routes
+        self.headers = {}
+
+    def get(self, url, timeout=30, params=None):
+        for needle, resp in self.routes.items():
+            if needle in url:
+                return resp
+        raise AssertionError(f"unexpected URL: {url}")
+
+
+def test_download_resume_uploaded_pdf(monkeypatch):
+    session = _FakeSession({
+        "drive.google.com/uc": _Resp(content=b"%PDF-data", ctype="application/pdf"),
+    })
+    monkeypatch.setattr(resume.requests, "Session", lambda: session)
+    assert resume.download_resume("https://drive.google.com/file/d/ID/view") == b"%PDF-data"
+
+
+def test_download_resume_google_doc_falls_back_to_export(monkeypatch):
+    session = _FakeSession({
+        "drive.google.com/uc": _Resp(status_code=500, ctype="text/html"),
+        "docs.google.com/document": _Resp(content=b"%PDF-exported", ctype="application/pdf"),
+    })
+    monkeypatch.setattr(resume.requests, "Session", lambda: session)
+    assert resume.download_resume("https://drive.google.com/file/d/ID/view") == b"%PDF-exported"
+
+
+def test_download_resume_all_endpoints_fail(monkeypatch):
+    session = _FakeSession({
+        "drive.google.com/uc": _Resp(status_code=500, ctype="text/html"),
+        "docs.google.com/document": _Resp(status_code=404, ctype="text/html"),
+    })
+    monkeypatch.setattr(resume.requests, "Session", lambda: session)
+    with pytest.raises(resume.ResumeError):
+        resume.download_resume("https://drive.google.com/file/d/ID/view")
